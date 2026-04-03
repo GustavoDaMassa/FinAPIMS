@@ -4,6 +4,7 @@ using FinanceApi.Finance.Api.GraphQL.Queries;
 using FinanceApi.Finance.Application.Interfaces;
 using FinanceApi.Finance.Application.Services;
 using FinanceApi.Finance.Infrastructure.Http;
+using FinanceApi.Finance.Infrastructure.Kafka;
 using FinanceApi.Finance.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -25,6 +26,12 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IFinancialIntegrationService, FinancialIntegrationService>();
+
+// Kafka consumer
+builder.Services.AddScoped<WebhookEventHandler>();
+builder.Services.AddHostedService<WebhookEventConsumer>();
+
+
 
 // GraphQL
 builder.Services

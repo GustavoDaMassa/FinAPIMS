@@ -71,15 +71,47 @@
 <summary><strong>src/FinanceApi.Identity/</strong></summary>
 <blockquote>
 
-- [FinanceApi.Identity.csproj](../src/FinanceApi.Identity/FinanceApi.Identity.csproj) — JwtBearer, EF Core, Npgsql, FluentValidation, Serilog
-- [Program.cs](../src/FinanceApi.Identity/Program.cs) — bootstrap mínimo
+- [FinanceApi.Identity.csproj](../src/FinanceApi.Identity/FinanceApi.Identity.csproj) — JwtBearer, EF Core, Npgsql, BCrypt.Net-Next, FluentValidation, Serilog
+- [Program.cs](../src/FinanceApi.Identity/Program.cs) — registra DbContext, JwtService, AuthService; aplica migrations no startup
 - [appsettings.json](../src/FinanceApi.Identity/appsettings.json) — connection string (schema: identity), JWT, MasterKey
 - [Dockerfile](../src/FinanceApi.Identity/Dockerfile)
 
 <details id="dir-identity-domain">
-<summary><strong>Domain/Models/</strong></summary>
+<summary><strong>Domain/</strong></summary>
 <blockquote>
-_(a preencher)_
+
+<details id="User">
+<summary><strong><a href="../src/FinanceApi.Identity/Domain/Models/User.cs">User.cs</a></strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Id: Guid` (gerado no Create)
+- `Name: string` (max 100)
+- `Email: string` (max 100, unique)
+- `PasswordHash: string`
+- `Role: Role` (enum, stored as string)
+- `CreatedAt: DateTime` (UTC)
+
+</details>
+<details><summary>metodos</summary>
+
+- `static Create(name, email, passwordHash, role): User` — factory method; construtor privado
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="Role">
+<summary><strong><a href="../src/FinanceApi.Identity/Domain/Enums/Role.cs">Role.cs</a> [enum]</strong></summary>
+<blockquote>
+
+- `User`, `Admin`
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -87,8 +119,43 @@ _(a preencher)_
 <summary><strong>Application/</strong></summary>
 <blockquote>
 
-- `Interfaces/` _(a preencher)_
-- `Services/` _(a preencher)_
+<details id="IAuthService">
+<summary><strong><a href="../src/FinanceApi.Identity/Application/Interfaces/IAuthService.cs">IAuthService.cs</a> [interface]</strong></summary>
+<blockquote>
+
+<details><summary>metodos</summary>
+
+- `RegisterAsync(RegisterRequest): Task<LoginResponse>`
+- `LoginAsync(LoginRequest): Task<LoginResponse>`
+- `CreateAdminAsync(CreateAdminRequest): Task<LoginResponse>`
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="AuthService">
+<summary><strong><a href="../src/FinanceApi.Identity/Application/Services/AuthService.cs">AuthService.cs</a> [implements [IAuthService](#IAuthService)]</strong></summary>
+<blockquote>
+
+<details><summary>dependencias</summary>
+
+- [IdentityDbContext](#IdentityDbContext)
+- [JwtService](#JwtService)
+- `IConfiguration`
+
+</details>
+<details><summary>metodos</summary>
+
+- `RegisterAsync` — verifica email duplicado, BCrypt.HashPassword, User.Create, salva, BuildResponse
+- `LoginAsync` — busca por email, BCrypt.Verify, BuildResponse; lança UnauthorizedAccessException se inválido
+- `CreateAdminAsync` — valida MasterKey, cria com Role.Admin
+- `BuildResponse(User): LoginResponse` — private
+
+</details>
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -97,8 +164,41 @@ _(a preencher)_
 <summary><strong>Infrastructure/</strong></summary>
 <blockquote>
 
-- `Persistence/` — DbContext, migrations (schema: identity)
-- `Security/` — JwtService, BCrypt
+<details id="IdentityDbContext">
+<summary><strong><a href="../src/FinanceApi.Identity/Infrastructure/Persistence/IdentityDbContext.cs">IdentityDbContext.cs</a> [DbContext]</strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Users: DbSet<User>`
+
+</details>
+<details><summary>configuracao</summary>
+
+- Schema padrão: `identity`
+- Email com índice unique
+- Role armazenado como string
+
+</details>
+
+</blockquote>
+</details>
+
+- [IdentityDbContextFactory.cs](../src/FinanceApi.Identity/Infrastructure/Persistence/IdentityDbContextFactory.cs) — `IDesignTimeDbContextFactory` para migrations em design-time
+- `Migrations/` — migration `InitialCreate` (tabela `identity.users`)
+
+<details id="JwtService">
+<summary><strong><a href="../src/FinanceApi.Identity/Infrastructure/Security/JwtService.cs">JwtService.cs</a></strong></summary>
+<blockquote>
+
+<details><summary>metodos</summary>
+
+- `GenerateToken(User): string` — HS256; claims: sub (Guid), email, role, jti
+
+</details>
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -107,8 +207,32 @@ _(a preencher)_
 <summary><strong>Api/</strong></summary>
 <blockquote>
 
-- `Controllers/` — AuthController (POST /auth/login, /auth/register, /auth/admin)
-- `Dtos/` — LoginRequest, RegisterRequest, LoginResponse
+<details id="AuthController">
+<summary><strong><a href="../src/FinanceApi.Identity/Api/Controllers/AuthController.cs">AuthController.cs</a> [ApiController, Route("auth")]</strong></summary>
+<blockquote>
+
+<details><summary>metodos</summary>
+
+- `POST /auth/register` → `RegisterAsync` — 200 OK / 409 Conflict
+- `POST /auth/login` → `LoginAsync` — 200 OK / 401 Unauthorized
+- `POST /auth/admin` → `CreateAdminAsync` — 200 OK / 401 / 409
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="AuthDtos">
+<summary><strong><a href="../src/FinanceApi.Identity/Api/Dtos/AuthDtos.cs">AuthDtos.cs</a> [records]</strong></summary>
+<blockquote>
+
+- `RegisterRequest(Name, Email, Password)`
+- `LoginRequest(Email, Password)`
+- `CreateAdminRequest(Name, Email, Password, MasterKey)`
+- `LoginResponse(Token, UserId, Email, Name, Role)`
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>

@@ -1,3 +1,4 @@
+using FinanceApi.Gateway.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -30,8 +31,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("authenticated", policy => policy.RequireAuthenticatedUser());
 });
 
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+builder.Services
+    .AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+    .AddTransforms<UserHeaderTransformProvider>();
 
 var app = builder.Build();
 

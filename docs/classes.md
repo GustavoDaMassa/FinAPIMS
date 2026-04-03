@@ -248,17 +248,120 @@
 <summary><strong>src/FinanceApi.Finance/</strong></summary>
 <blockquote>
 
-- [FinanceApi.Finance.csproj](../src/FinanceApi.Finance/FinanceApi.Finance.csproj) — JwtBearer, EF Core, Npgsql, HotChocolate 14, Confluent.Kafka, FluentValidation, Serilog, Mapperly
-- [Program.cs](../src/FinanceApi.Finance/Program.cs) — bootstrap com GraphQL e Kafka consumer
-- [appsettings.json](../src/FinanceApi.Finance/appsettings.json) — connection string (schema: finance), JWT, Kafka
+- [FinanceApi.Finance.csproj](../src/FinanceApi.Finance/FinanceApi.Finance.csproj) — EF Core, Npgsql, HotChocolate 14, Confluent.Kafka, Serilog
+- [Program.cs](../src/FinanceApi.Finance/Program.cs) — DbContext, serviços, UserContext, Hot Chocolate + extensions, Kafka consumer; aplica migrations no startup
+- [appsettings.json](../src/FinanceApi.Finance/appsettings.json) — connection string (schema: finance), Kafka
 - [Dockerfile](../src/FinanceApi.Finance/Dockerfile)
 
 <details id="dir-finance-domain">
 <summary><strong>Domain/</strong></summary>
 <blockquote>
 
-- `Models/` — Account, Transaction, Category, FinancialIntegration _(a preencher)_
-- `Enums/` — TransactionType (INFLOW/OUTFLOW), AggregatorType (PLUGGY/BELVO) _(a preencher)_
+<details id="Account">
+<summary><strong><a href="../src/FinanceApi.Finance/Domain/Models/Account.cs">Account.cs</a></strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Id: Guid`, `AccountName: string`, `Institution: string`, `Description: string?`
+- `Balance: decimal` (atualizado por UpdateBalance)
+- `PluggyAccountId: string?` (unique, nullable)
+- `UserId: Guid`, `IntegrationId: Guid?`
+
+</details>
+<details><summary>metodos</summary>
+
+- `static Create(...)`: Account — factory
+- `Update(accountName, institution, description)`
+- `UpdateBalance(balance)`
+- `LinkToPluggy(pluggyAccountId, integrationId)`
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="Category">
+<summary><strong><a href="../src/FinanceApi.Finance/Domain/Models/Category.cs">Category.cs</a></strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Id: Guid`, `Name: string`, `UserId: Guid`
+- Unique constraint: (Name, UserId)
+
+</details>
+<details><summary>metodos</summary>
+
+- `static Create(name, userId)`, `Update(name)`
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="Transaction">
+<summary><strong><a href="../src/FinanceApi.Finance/Domain/Models/Transaction.cs">Transaction.cs</a></strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Id: Guid`, `Amount: decimal`, `Type: TransactionType`, `Description: string?`
+- `Source: string?`, `Destination: string?`, `TransactionDate: DateOnly`
+- `ExternalId: string?` (unique, para deduplicação Pluggy/OFX)
+- `AccountId: Guid`, `CategoryId: Guid?`
+
+</details>
+<details><summary>metodos</summary>
+
+- `static Create(...)`: Transaction — factory
+- `Categorize(categoryId: Guid?)`
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="FinancialIntegration">
+<summary><strong><a href="../src/FinanceApi.Finance/Domain/Models/FinancialIntegration.cs">FinancialIntegration.cs</a></strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Id: Guid`, `Aggregator: AggregatorType`, `LinkId: string` (unique)
+- `Status: string?`, `CreatedAt: DateTime`, `ExpiresAt: DateTime?`
+- `UserId: Guid`
+
+</details>
+<details><summary>metodos</summary>
+
+- `static Create(aggregator, linkId, userId)` — ExpiresAt = +12 meses, Status = "UPDATED"
+- `UpdateStatus(status)`, `Renew()`
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="TransactionType">
+<summary><strong><a href="../src/FinanceApi.Finance/Domain/Enums/TransactionType.cs">TransactionType.cs</a> [enum + extension]</strong></summary>
+<blockquote>
+
+- `Inflow`, `Outflow`
+- `Apply(amount): decimal` — Inflow: +amount, Outflow: -amount (enum strategy via extension)
+- `FromPluggy(string): TransactionType` — "CREDIT" → Inflow, demais → Outflow
+
+</blockquote>
+</details>
+
+<details id="AggregatorType">
+<summary><strong><a href="../src/FinanceApi.Finance/Domain/Enums/AggregatorType.cs">AggregatorType.cs</a> [enum]</strong></summary>
+<blockquote>
+
+- `Pluggy`, `Belvo`
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -267,8 +370,109 @@
 <summary><strong>Application/</strong></summary>
 <blockquote>
 
-- `Interfaces/` _(a preencher)_
-- `Services/` _(a preencher)_
+<details id="NotFoundException">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Exceptions/NotFoundException.cs">NotFoundException.cs</a></strong></summary>
+<blockquote>
+
+- `NotFoundException` (abstract) → `AccountNotFoundException(Guid)`, `TransactionNotFoundException(Guid)`, `CategoryNotFoundException(Guid)`, `FinancialIntegrationNotFoundException(Guid | string)`
+
+</blockquote>
+</details>
+
+- [FinanceDtos.cs](../src/FinanceApi.Finance/Application/Dtos/FinanceDtos.cs) — records: `AccountDto`, `CategoryDto`, `TransactionDto`, `TransactionListWithBalanceDto`, `FinancialIntegrationDto` + requests
+
+<details id="IAccountService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Interfaces/IAccountService.cs">IAccountService.cs</a> [interface]</strong></summary>
+<blockquote>
+
+`CreateAsync` · `FindByIdAsync` · `ListByUserAsync` · `UpdateAsync` · `DeleteAsync` · `LinkToPluggyAsync`
+
+</blockquote>
+</details>
+
+<details id="AccountService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Services/AccountService.cs">AccountService.cs</a> [implements [IAccountService](#IAccountService)]</strong></summary>
+<blockquote>
+
+<details><summary>dependencias</summary>
+
+- [FinanceDbContext](#FinanceDbContext)
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="ICategoryService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Interfaces/ICategoryService.cs">ICategoryService.cs</a> [interface]</strong></summary>
+<blockquote>
+
+`CreateAsync` (lança InvalidOperationException se duplicata) · `FindByIdAsync` · `ListByUserAsync` · `DeleteAsync`
+
+</blockquote>
+</details>
+
+<details id="CategoryService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Services/CategoryService.cs">CategoryService.cs</a> [implements [ICategoryService](#ICategoryService)]</strong></summary>
+<blockquote>
+
+<details><summary>dependencias</summary>
+
+- [FinanceDbContext](#FinanceDbContext)
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="ITransactionService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Interfaces/ITransactionService.cs">ITransactionService.cs</a> [interface]</strong></summary>
+<blockquote>
+
+`CreateAsync` · `FindByIdAsync` · `ListByAccountAsync` · `ListByPeriodAsync` · `ListByTypeAsync` · `ListByCategoriesAsync` · `CategorizeAsync` · `ExistsByExternalIdAsync` · `DeleteAsync`
+
+</blockquote>
+</details>
+
+<details id="TransactionService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Services/TransactionService.cs">TransactionService.cs</a> [implements [ITransactionService](#ITransactionService)]</strong></summary>
+<blockquote>
+
+<details><summary>dependencias</summary>
+
+- [FinanceDbContext](#FinanceDbContext)
+
+</details>
+<details><summary>metodos notaveis</summary>
+
+- `BuildResult(List<Transaction>)` — private; calcula balanço via `TransactionType.Apply()`
+
+</details>
+
+</blockquote>
+</details>
+
+<details id="IFinancialIntegrationService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Interfaces/IFinancialIntegrationService.cs">IFinancialIntegrationService.cs</a> [interface]</strong></summary>
+<blockquote>
+
+`CreateAsync` · `FindByIdAsync` · `FindByLinkIdAsync` · `ListByUserAsync` · `DeleteAsync`
+
+</blockquote>
+</details>
+
+<details id="FinancialIntegrationService">
+<summary><strong><a href="../src/FinanceApi.Finance/Application/Services/FinancialIntegrationService.cs">FinancialIntegrationService.cs</a> [implements [IFinancialIntegrationService](#IFinancialIntegrationService)]</strong></summary>
+<blockquote>
+
+<details><summary>dependencias</summary>
+
+- [FinanceDbContext](#FinanceDbContext)
+
+</details>
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -277,8 +481,48 @@
 <summary><strong>Infrastructure/</strong></summary>
 <blockquote>
 
-- `Persistence/` — DbContext, migrations (schema: finance)
-- `Kafka/` — WebhookEventConsumer (IHostedService)
+<details id="FinanceDbContext">
+<summary><strong><a href="../src/FinanceApi.Finance/Infrastructure/Persistence/FinanceDbContext.cs">FinanceDbContext.cs</a> [DbContext]</strong></summary>
+<blockquote>
+
+<details><summary>atributos</summary>
+
+- `Accounts`, `Categories`, `Transactions`, `FinancialIntegrations` — DbSets
+
+</details>
+<details><summary>configuracao</summary>
+
+- Schema padrão: `finance`
+- `PluggyAccountId` unique (filtrado para não nulos)
+- `ExternalId` unique (filtrado para não nulos)
+- `TransactionType` e `AggregatorType` armazenados como string
+- Category: unique constraint (Name, UserId)
+
+</details>
+
+</blockquote>
+</details>
+
+- [FinanceDbContextFactory.cs](../src/FinanceApi.Finance/Infrastructure/Persistence/FinanceDbContextFactory.cs) — design-time factory para migrations
+- `Migrations/` — migration `InitialCreate` (schema: finance)
+
+<details id="IUserContext">
+<summary><strong><a href="../src/FinanceApi.Finance/Infrastructure/Http/IUserContext.cs">IUserContext.cs</a> [interface]</strong></summary>
+<blockquote>
+
+- `UserId: Guid`, `IsAdmin: bool`
+
+</blockquote>
+</details>
+
+<details id="UserContext">
+<summary><strong><a href="../src/FinanceApi.Finance/Infrastructure/Http/UserContext.cs">UserContext.cs</a> [implements [IUserContext](#IUserContext)]</strong></summary>
+<blockquote>
+
+Lê `X-User-Id` e `X-User-Role` dos headers HTTP injetados pelo gateway. Lança `UnauthorizedAccessException` se header ausente.
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -287,10 +531,28 @@
 <summary><strong>Api/</strong></summary>
 <blockquote>
 
-- `GraphQL/Resolvers/` — AccountResolver, TransactionResolver, CategoryResolver, FinancialIntegrationResolver
-- `GraphQL/Types/` — tipos de saída Hot Chocolate
-- `GraphQL/Inputs/` — inputs de mutação
-- `Controllers/` — ImportController (POST /import, OFX)
+<details id="FinanceErrorFilter">
+<summary><strong><a href="../src/FinanceApi.Finance/Api/GraphQL/Errors/FinanceErrorFilter.cs">FinanceErrorFilter.cs</a> [IErrorFilter]</strong></summary>
+<blockquote>
+
+Converte exceções em erros GraphQL tipados: `NotFoundException` → NOT_FOUND, `InvalidOperationException` → CONFLICT, `UnauthorizedAccessException` → UNAUTHORIZED.
+
+</blockquote>
+</details>
+
+**Queries** (`[ExtendObjectType(Query)]`):
+- [AccountQueries.cs](../src/FinanceApi.Finance/Api/GraphQL/Queries/AccountQueries.cs) — `account(id)`, `accounts` (scoped ao user via header)
+- [CategoryQueries.cs](../src/FinanceApi.Finance/Api/GraphQL/Queries/CategoryQueries.cs) — `category(id)`, `categories`
+- [TransactionQueries.cs](../src/FinanceApi.Finance/Api/GraphQL/Queries/TransactionQueries.cs) — `transaction(id)`, `transactions(accountId)`, `transactionsByPeriod`, `transactionsByType`, `transactionsByCategories`
+- [FinancialIntegrationQueries.cs](../src/FinanceApi.Finance/Api/GraphQL/Queries/FinancialIntegrationQueries.cs) — `financialIntegration(id)`, `financialIntegrations`
+
+**Mutations** (`[ExtendObjectType(Mutation)]`):
+- [AccountMutations.cs](../src/FinanceApi.Finance/Api/GraphQL/Mutations/AccountMutations.cs) — `createAccount`, `updateAccount`, `deleteAccount`, `linkAccount`
+- [CategoryMutations.cs](../src/FinanceApi.Finance/Api/GraphQL/Mutations/CategoryMutations.cs) — `createCategory`, `deleteCategory`
+- [TransactionMutations.cs](../src/FinanceApi.Finance/Api/GraphQL/Mutations/TransactionMutations.cs) — `createTransaction`, `updateTransaction`, `categorizeTransaction`, `deleteTransaction`
+- [FinancialIntegrationMutations.cs](../src/FinanceApi.Finance/Api/GraphQL/Mutations/FinancialIntegrationMutations.cs) — `createFinancialIntegration`, `deleteFinancialIntegration`
+
+- `Controllers/` — ImportController (POST /import, OFX) _(a implementar)_
 
 </blockquote>
 </details>

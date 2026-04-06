@@ -65,6 +65,17 @@ public class TransactionService(FinanceDbContext db) : ITransactionService
         return BuildResult(transactions);
     }
 
+    public async Task<TransactionDto> UpdateAsync(Guid id, UpdateTransactionRequest request)
+    {
+        var transaction = await db.Transactions.FindAsync(id)
+            ?? throw new TransactionNotFoundException(id);
+        transaction.Update(
+            request.Amount, request.Type, request.Description,
+            request.Source, request.Destination, request.TransactionDate, request.CategoryId);
+        await db.SaveChangesAsync();
+        return ToDto(transaction);
+    }
+
     public async Task<TransactionDto> CategorizeAsync(Guid id, Guid? categoryId)
     {
         var transaction = await db.Transactions.FindAsync(id)

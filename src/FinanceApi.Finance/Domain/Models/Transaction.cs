@@ -46,5 +46,23 @@ public class Transaction
         };
     }
 
+    public void Update(
+        decimal amount,
+        TransactionType type,
+        string? description,
+        string? source,
+        string? destination,
+        DateOnly transactionDate,
+        Guid? categoryId)
+    {
+        Amount = amount;
+        Type = type;
+        Description = description;
+        Source = source;
+        Destination = destination;
+        TransactionDate = transactionDate;
+        CategoryId = categoryId;
+    }
+
     public void Categorize(Guid? categoryId) => CategoryId = categoryId;
 }

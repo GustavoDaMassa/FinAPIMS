@@ -11,6 +11,7 @@ public interface ITransactionService
     Task<TransactionListWithBalanceDto> ListByPeriodAsync(Guid accountId, DateOnly start, DateOnly end);
     Task<TransactionListWithBalanceDto> ListByTypeAsync(Guid accountId, TransactionType type);
     Task<TransactionListWithBalanceDto> ListByCategoriesAsync(Guid accountId, IList<Guid> categoryIds);
+    Task<TransactionDto> UpdateAsync(Guid id, UpdateTransactionRequest request);
     Task<TransactionDto> CategorizeAsync(Guid id, Guid? categoryId);
     Task<bool> ExistsByExternalIdAsync(string externalId);
     Task DeleteAsync(Guid id);

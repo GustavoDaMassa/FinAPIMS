@@ -207,6 +207,38 @@ public class TransactionServiceTests
     }
 
     [Fact]
+    public async Task Update_ShouldModifyFieldsAndReturnDto()
+    {
+        var service = CreateService(out var db);
+        var account = SeedAccount(db);
+        var tx = await service.CreateAsync(InflowRequest(account.Id, 100m));
+        var newDate = new DateOnly(2024, 6, 1);
+        var request = new UpdateTransactionRequest(200m, TransactionType.Outflow, "Aluguel", "Conta", null, newDate, null);
+
+        var result = await service.UpdateAsync(tx.Id, request);
+
+        Assert.Equal(tx.Id, result.Id);
+        Assert.Equal(200m, result.Amount);
+        Assert.Equal(TransactionType.Outflow, result.Type);
+        Assert.Equal("Aluguel", result.Description);
+        Assert.Equal("Conta", result.Source);
+        Assert.Null(result.Destination);
+        Assert.Equal(newDate, result.TransactionDate);
+        Assert.Null(result.CategoryId);
+        Assert.Equal(account.Id, result.AccountId); // AccountId nunca muda
+    }
+
+    [Fact]
+    public async Task Update_WhenNotFound_ShouldThrow()
+    {
+        var service = CreateService(out _);
+        var request = new UpdateTransactionRequest(50m, TransactionType.Inflow, null, null, null, DateOnly.FromDateTime(DateTime.Today), null);
+
+        await Assert.ThrowsAsync<TransactionNotFoundException>(() =>
+            service.UpdateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
     public async Task ListByCategories_ShouldFilterByCategoryIds()
     {
         var service = CreateService(out var db);

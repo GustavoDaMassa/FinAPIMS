@@ -31,16 +31,9 @@ public class TransactionMutations
         string? destination,
         DateOnly transactionDate,
         Guid? categoryId,
-        [Service] ITransactionService service)
-    {
-        // FindById primeiro para lançar not found se não existir,
-        // depois recria via delete + create para simplificar o domínio.
-        // Alternativa futura: adicionar Update na entidade.
-        var existing = await service.FindByIdAsync(id);
-        await service.DeleteAsync(id);
-        return await service.CreateAsync(new CreateTransactionRequest(
-            amount, type, description, source, destination, transactionDate, existing.AccountId, categoryId));
-    }
+        [Service] ITransactionService service) =>
+        await service.UpdateAsync(id, new UpdateTransactionRequest(
+            amount, type, description, source, destination, transactionDate, categoryId));
 
     public async Task<TransactionDto> CategorizeTransaction(
         Guid id,

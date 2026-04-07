@@ -1,0 +1,117 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: finance-postgres
+    environment:
+      POSTGRES_DB: financeapi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: finance-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: finance-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    restart: unless-stopped
+
+  gateway:
+    image: gustavodamassa/finance-gateway:latest
+    container_name: finance-gateway
+    environment:
+      - Jwt__Secret=${JWT_SECRET}
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      - identity-service
+      - finance-service
+      - webhook-service
+    restart: unless-stopped
+
+  identity-service:
+    image: gustavodamassa/finance-identity:latest
+    container_name: finance-identity
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=financeapi;Username=postgres;Password=${DATABASE_PASSWORD};Search Path=identity
+      - Jwt__Secret=${JWT_SECRET}
+      - App__MasterKey=${MASTER_KEY}
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  finance-service:
+    image: gustavodamassa/finance-core:latest
+    container_name: finance-core
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=financeapi;Username=postgres;Password=${DATABASE_PASSWORD};Search Path=finance
+      - Jwt__Secret=${JWT_SECRET}
+      - Kafka__BootstrapServers=kafka:9092
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  webhook-service:
+    image: gustavodamassa/finance-webhook:latest
+    container_name: finance-webhook
+    environment:
+      - Kafka__BootstrapServers=kafka:9092
+      - Pluggy__ClientId=${PLUGGY_CLIENT_ID}
+      - Pluggy__ClientSecret=${PLUGGY_CLIENT_SECRET}
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: finance-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: finance-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=30
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+    command: finance-gateway finance-identity finance-core finance-webhook
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -5,6 +5,7 @@ using FinanceApi.Finance.Application.Interfaces;
 using FinanceApi.Finance.Application.Services;
 using FinanceApi.Finance.Infrastructure.Http;
 using FinanceApi.Finance.Infrastructure.Kafka;
+using FinanceApi.Finance.Infrastructure.Ofx;
 using FinanceApi.Finance.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -26,6 +27,10 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IFinancialIntegrationService, FinancialIntegrationService>();
+builder.Services.AddSingleton<OfxParser>();
+builder.Services.AddScoped<IOfxImportService, OfxImportService>();
+
+builder.Services.AddControllers();
 
 // Kafka consumer
 builder.Services.AddScoped<WebhookEventHandler>();
@@ -57,6 +62,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseSerilogRequestLogging();
+app.MapControllers();
 app.MapGraphQL();
 
 app.Run();

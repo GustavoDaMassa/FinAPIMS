@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/MSlogo.svg" alt="MSFinanceApi" width="400"/></p>
+<p align="center"><img src="docs/MSlogo.png" alt="MSFinanceApi" width="400"/></p>
 
 # MSFinanceApi
 

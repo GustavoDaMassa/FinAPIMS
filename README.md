@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/MSlogo.svg" alt="MSFinanceApi" width="400"/></p>
+
 # MSFinanceApi
 
 Reimplementação da [financeApi](https://github.com/GustavoDaMassa/financeApi) como sistema de microsserviços em **.NET 9 / ASP.NET Core / C#**.

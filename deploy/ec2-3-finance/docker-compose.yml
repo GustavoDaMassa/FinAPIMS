@@ -43,7 +43,9 @@ services:
     restart: unless-stopped
 
   finance:
-    image: gustavodamassa/finance-core:latest
+    build:
+      context: ../..
+      dockerfile: src/FinanceApi.Finance/Dockerfile
     container_name: finance-core
     ports:
       - "8080:8080"

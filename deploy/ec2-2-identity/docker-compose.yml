@@ -16,7 +16,9 @@ services:
     restart: unless-stopped
 
   identity:
-    image: gustavodamassa/finance-identity:latest
+    build:
+      context: ../..
+      dockerfile: src/FinanceApi.Identity/Dockerfile
     container_name: finance-identity
     ports:
       - "8080:8080"

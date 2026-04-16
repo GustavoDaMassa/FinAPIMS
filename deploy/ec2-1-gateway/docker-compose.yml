@@ -1,6 +1,8 @@
 services:
   gateway:
-    image: gustavodamassa/finance-gateway:latest
+    build:
+      context: ../..
+      dockerfile: src/FinanceApi.Gateway/Dockerfile
     container_name: finance-gateway
     ports:
       - "8080:8080"

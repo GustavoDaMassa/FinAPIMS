@@ -1,6 +1,8 @@
 services:
   webhook:
-    image: gustavodamassa/finance-webhook:latest
+    build:
+      context: ../..
+      dockerfile: src/FinanceApi.Webhook/Dockerfile
     container_name: finance-webhook
     ports:
       - "8080:8080"

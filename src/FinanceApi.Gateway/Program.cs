@@ -38,7 +38,10 @@ builder.Services
 
 var app = builder.Build();
 
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "[GATEWAY] {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0}ms)";
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapReverseProxy();

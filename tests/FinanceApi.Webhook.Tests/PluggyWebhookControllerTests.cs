@@ -3,6 +3,7 @@ using FinanceApi.Webhook.Api.Controllers;
 using FinanceApi.Webhook.Application.Dtos;
 using FinanceApi.Webhook.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace FinanceApi.Webhook.Tests;
@@ -14,7 +15,8 @@ public class PluggyWebhookControllerTests
     {
         var pluggyClient = Substitute.For<IPluggyClient>();
         var producer = Substitute.For<IWebhookEventProducer>();
-        return (new PluggyWebhookController(pluggyClient, producer), pluggyClient, producer);
+        var logger = NullLogger<PluggyWebhookController>.Instance;
+        return (new PluggyWebhookController(pluggyClient, producer, logger), pluggyClient, producer);
     }
 
     [Fact]

@@ -16,6 +16,9 @@ public class WebhookEventHandler(
 {
     public async Task HandleAsync(WebhookEvent evt)
     {
+        logger?.LogInformation("[FINANCE] Kafka message received — linkId={LinkId} transactions={Count}",
+            evt.LinkId, evt.Transactions.Count);
+
         var integration = await db.FinancialIntegrations
             .SingleOrDefaultAsync(f => f.LinkId == evt.LinkId)
             ?? throw new InvalidOperationException($"Integration with linkId '{evt.LinkId}' not found.");
@@ -24,7 +27,7 @@ public class WebhookEventHandler(
         {
             if (await transactionService.ExistsByExternalIdAsync(tx.ExternalId))
             {
-                logger?.LogDebug("Skipping duplicate externalId={ExternalId}", tx.ExternalId);
+                logger?.LogInformation("[FINANCE] Duplicate skipped — externalId={ExternalId}", tx.ExternalId);
                 continue;
             }
 
@@ -34,7 +37,8 @@ public class WebhookEventHandler(
 
             if (account is null)
             {
-                logger?.LogWarning("No account found for pluggyAccountId={PluggyAccountId}, skipping", tx.PluggyAccountId);
+                logger?.LogWarning("[FINANCE] No account found for pluggyAccountId={PluggyAccountId}, skipping",
+                    tx.PluggyAccountId);
                 continue;
             }
 
@@ -44,6 +48,9 @@ public class WebhookEventHandler(
                 tx.Amount, type, tx.Description,
                 null, null, tx.Date,
                 account.Id, null, tx.ExternalId));
+
+            logger?.LogInformation("[FINANCE] Transaction created — externalId={ExternalId} amount={Amount} type={Type} accountId={AccountId}",
+                tx.ExternalId, tx.Amount, type, account.Id);
         }
     }
 }

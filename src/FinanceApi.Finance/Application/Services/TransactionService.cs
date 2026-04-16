@@ -23,6 +23,7 @@ public class TransactionService(FinanceDbContext db) : ITransactionService
 
         db.Transactions.Add(transaction);
         await db.SaveChangesAsync();
+        await RecalculateBalanceAsync(request.AccountId);
         return ToDto(transaction);
     }
 
@@ -73,6 +74,7 @@ public class TransactionService(FinanceDbContext db) : ITransactionService
             request.Amount, request.Type, request.Description,
             request.Source, request.Destination, request.TransactionDate, request.CategoryId);
         await db.SaveChangesAsync();
+        await RecalculateBalanceAsync(transaction.AccountId);
         return ToDto(transaction);
     }
 
@@ -92,8 +94,27 @@ public class TransactionService(FinanceDbContext db) : ITransactionService
     {
         var transaction = await db.Transactions.FindAsync(id)
             ?? throw new TransactionNotFoundException(id);
+        var accountId = transaction.AccountId;
         db.Transactions.Remove(transaction);
         await db.SaveChangesAsync();
+        await RecalculateBalanceAsync(accountId);
+    }
+
+    private async Task RecalculateBalanceAsync(Guid accountId)
+    {
+        var rows = await db.Transactions
+            .Where(t => t.AccountId == accountId)
+            .Select(t => new { t.Type, t.Amount })
+            .ToListAsync();
+
+        var balance = rows.Sum(t => t.Type.Apply(t.Amount));
+
+        var account = await db.Accounts.FindAsync(accountId);
+        if (account is not null)
+        {
+            account.UpdateBalance(balance);
+            await db.SaveChangesAsync();
+        }
     }
 
     private static TransactionListWithBalanceDto BuildResult(List<Transaction> transactions)

@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: finance-postgres
+    environment:
+      POSTGRES_DB: financeapi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: finance-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: finance-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"   # exposto para o Webhook (EC2-4) via IP privado
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Dois listeners: interno (Finance no mesmo compose) e externo (Webhook em outra EC2)
+      KAFKA_LISTENERS: PLAINTEXT_INT://0.0.0.0:29092,PLAINTEXT_EXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INT://kafka:29092,PLAINTEXT_EXT://172.31.52.210:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INT:PLAINTEXT,PLAINTEXT_EXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    restart: unless-stopped
+
+  finance:
+    image: gustavodamassa/finance-core:latest
+    container_name: finance-core
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=financeapi;Username=postgres;Password=${DATABASE_PASSWORD};Search Path=finance
+      - Kafka__BootstrapServers=kafka:29092
+      - Serilog__WriteTo__0__Name=Console
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

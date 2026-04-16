@@ -2,7 +2,7 @@
 
 # MSFinanceApi
 
-Reimplementação da [financeApi](https://github.com/GustavoDaMassa/financeApi) como sistema de microsserviços em **.NET 9 / ASP.NET Core / C#**.
+Reimplementação da [financeApi](https://github.com/GustavoDaMassa/financeApi) como sistema de microsserviços em **.NET 8 / ASP.NET Core / C#**.
 
 O objetivo é aplicar os conceitos de Sistemas Distribuídos na prática — cada serviço com responsabilidade isolada, banco de dados próprio, comunicação síncrona via HTTP e assíncrona via Kafka.
 
@@ -12,7 +12,7 @@ O objetivo é aplicar os conceitos de Sistemas Distribuídos na prática — cad
 
 | Componente | Tecnologia |
 |---|---|
-| Runtime | .NET 9 |
+| Runtime | .NET 8 |
 | Framework | ASP.NET Core |
 | Banco de dados | PostgreSQL 15 (schemas isolados por serviço) |
 | ORM | Entity Framework Core |
@@ -274,7 +274,7 @@ dotnet run
 
 | | financeApi (monolito) | MSFinanceApi (microsserviços) |
 |---|---|---|
-| Linguagem | Java 21 / Spring Boot | C# / .NET 9 / ASP.NET Core |
+| Linguagem | Java 21 / Spring Boot | C# / .NET 8 / ASP.NET Core |
 | Auth | JWT RSA no próprio serviço | JWT HMAC no Gateway, propagado via header |
 | Banco | PostgreSQL único (tabelas) | PostgreSQL único (schemas isolados) |
 | Deploy | Um container | Quatro containers de serviço |

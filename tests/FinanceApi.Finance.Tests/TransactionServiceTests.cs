@@ -254,4 +254,46 @@ public class TransactionServiceTests
         Assert.Single(result.Transactions);
         Assert.Equal(cat.Id, result.Transactions[0].CategoryId);
     }
+
+    [Fact]
+    public async Task Create_ShouldUpdateAccountBalance()
+    {
+        var service = CreateService(out var db);
+        var account = SeedAccount(db);
+
+        await service.CreateAsync(InflowRequest(account.Id, 200m));
+        await service.CreateAsync(OutflowRequest(account.Id, 50m));
+
+        var updated = await db.Accounts.FindAsync(account.Id);
+        Assert.Equal(150m, updated!.Balance);
+    }
+
+    [Fact]
+    public async Task Update_ShouldUpdateAccountBalance()
+    {
+        var service = CreateService(out var db);
+        var account = SeedAccount(db);
+        var tx = await service.CreateAsync(InflowRequest(account.Id, 100m));
+
+        await service.UpdateAsync(tx.Id, new UpdateTransactionRequest(
+            300m, TransactionType.Inflow, null, null, null,
+            DateOnly.FromDateTime(DateTime.Today), null));
+
+        var updated = await db.Accounts.FindAsync(account.Id);
+        Assert.Equal(300m, updated!.Balance);
+    }
+
+    [Fact]
+    public async Task Delete_ShouldUpdateAccountBalance()
+    {
+        var service = CreateService(out var db);
+        var account = SeedAccount(db);
+        await service.CreateAsync(InflowRequest(account.Id, 100m));
+        var tx2 = await service.CreateAsync(InflowRequest(account.Id, 50m));
+
+        await service.DeleteAsync(tx2.Id);
+
+        var updated = await db.Accounts.FindAsync(account.Id);
+        Assert.Equal(100m, updated!.Balance);
+    }
 }

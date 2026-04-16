@@ -11,4 +11,5 @@ services:
       - Pluggy__ClientId=${PLUGGY_CLIENT_ID}
       - Pluggy__ClientSecret=${PLUGGY_CLIENT_SECRET}
       - Serilog__WriteTo__0__Name=Console
+      - APP_INSTANCE=EC2-4 | WEBHOOK | 172.31.57.127
     restart: unless-stopped

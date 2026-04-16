@@ -20,6 +20,8 @@ builder.Services.AddSingleton<IWebhookEventProducer, WebhookEventProducer>();
 
 var app = builder.Build();
 
+app.Logger.LogInformation("=== {Instance} ===", app.Configuration["APP_INSTANCE"] ?? "WEBHOOK");
+
 app.UseSerilogRequestLogging();
 app.MapControllers();
 

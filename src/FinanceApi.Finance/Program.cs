@@ -55,6 +55,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.Logger.LogInformation("=== {Instance} ===", app.Configuration["APP_INSTANCE"] ?? "FINANCE");
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();

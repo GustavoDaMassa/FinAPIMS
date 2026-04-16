@@ -53,6 +53,7 @@ services:
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=financeapi;Username=postgres;Password=${DATABASE_PASSWORD};Search Path=finance
       - Kafka__BootstrapServers=kafka:29092
       - Serilog__WriteTo__0__Name=Console
+      - APP_INSTANCE=EC2-3 | FINANCE | 172.31.52.210
     depends_on:
       postgres:
         condition: service_healthy

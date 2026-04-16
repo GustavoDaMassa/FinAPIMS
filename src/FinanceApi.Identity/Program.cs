@@ -19,6 +19,8 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+app.Logger.LogInformation("=== {Instance} ===", app.Configuration["APP_INSTANCE"] ?? "IDENTITY");
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();

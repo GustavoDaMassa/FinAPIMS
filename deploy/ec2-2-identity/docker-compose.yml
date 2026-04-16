@@ -27,6 +27,7 @@ services:
       - Jwt__Secret=${JWT_SECRET}
       - App__MasterKey=${MASTER_KEY}
       - Serilog__WriteTo__0__Name=Console
+      - APP_INSTANCE=EC2-2 | IDENTITY | 172.31.55.147
     depends_on:
       postgres:
         condition: service_healthy

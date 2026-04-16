@@ -38,6 +38,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.Logger.LogInformation("=== {Instance} ===", app.Configuration["APP_INSTANCE"] ?? "GATEWAY");
+
 app.UseSerilogRequestLogging(options =>
 {
     options.MessageTemplate = "[GATEWAY] {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0}ms)";

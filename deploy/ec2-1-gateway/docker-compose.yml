@@ -10,7 +10,7 @@ services:
       - Jwt__Secret=${JWT_SECRET}
       # Destinos internos via IP privado da VPC
       - ReverseProxy__Clusters__identity-cluster__Destinations__identity__Address=http://172.31.55.147:8080
-      - ReverseProxy__Clusters__finance-cluster__Destinations__finance__Address=http://172.31.52.210:8080
+      - ReverseProxy__Clusters__finance-cluster__Destinations__finance__Address=http://172.31.48.78:8080
       - ReverseProxy__Clusters__webhook-cluster__Destinations__webhook__Address=http://172.31.57.127:8080
       # Serilog console sink
       - Serilog__WriteTo__0__Name=Console

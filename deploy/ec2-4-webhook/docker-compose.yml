@@ -7,7 +7,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - Kafka__BootstrapServers=172.31.52.210:9092
+      - Kafka__BootstrapServers=172.31.48.78:9092
       - Pluggy__ClientId=${PLUGGY_CLIENT_ID}
       - Pluggy__ClientSecret=${PLUGGY_CLIENT_SECRET}
       - Serilog__WriteTo__0__Name=Console

@@ -35,7 +35,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # Dois listeners: interno (Finance no mesmo compose) e externo (Webhook em outra EC2)
       KAFKA_LISTENERS: PLAINTEXT_INT://0.0.0.0:29092,PLAINTEXT_EXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INT://kafka:29092,PLAINTEXT_EXT://172.31.52.210:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INT://kafka:29092,PLAINTEXT_EXT://172.31.48.78:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INT:PLAINTEXT,PLAINTEXT_EXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -53,7 +53,7 @@ services:
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=financeapi;Username=postgres;Password=${DATABASE_PASSWORD};Search Path=finance
       - Kafka__BootstrapServers=kafka:29092
       - Serilog__WriteTo__0__Name=Console
-      - APP_INSTANCE=EC2-3 | FINANCE | 172.31.52.210
+      - APP_INSTANCE=EC2-3 | FINANCE | 172.31.48.78
     depends_on:
       postgres:
         condition: service_healthy
